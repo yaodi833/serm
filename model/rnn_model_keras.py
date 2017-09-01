@@ -118,21 +118,21 @@ def geo_lprnn_trainable_text_model(user_dim, len,word_vec, place_dim = GRID_COUN
 
 
     pl_embedding = Embedding(input_dim=place_dim + 1, output_dim=pl_d, name ='pl_embedding' ,
-                             mask_zero=True)(pl_input)
+                              mask_zero=True)(pl_input)
     time_embedding = Embedding(input_dim=time_dim + 1, output_dim=time_k, name='time_embedding',
                                mask_zero=True)(time_input)
     user_embedding = Embedding(input_dim=user_dim + 1, output_dim=place_dim + 1, name='user_embedding',
                                mask_zero=True)(user_input)
 
     # text_embedding = Embedding(input_dim=word_vec.shape[0],output_dim= TEXT_K,
-    #                            weights=[word_vec],name="text_embeddng")(text_input)
-    text_embedding = EmbeddingMatrix(TEXT_K, weights=[word_vec], name="text_embeddng")(text_input)
+    #                           weights=[word_vec],name="text_embeddng")(text_input)
+    text_embedding = EmbeddingMatrix(TEXT_K, weights=[word_vec], name="text_embeddng", trainable=True)(text_input)
 
     attrs_latent = merge([pl_embedding,time_embedding, text_embedding],mode='concat')
     # time_dist = TimeDistributed(Dense(50))
     lstm_out = LSTM(hidden_neurons, return_sequences=True,name='lstm_layer0')(attrs_latent)
-    lstm_out = LSTM(hidden_neurons, return_sequences=True, name='lstm_layer1')(lstm_out)
-    lstm_out = LSTM(hidden_neurons, return_sequences=True, name='lstm_layer2')(lstm_out)
+    # lstm_out = LSTM(hidden_neurons, return_sequences=True, name='lstm_layer1')(lstm_out)
+    # lstm_out = LSTM(hidden_neurons, return_sequences=True, name='lstm_layer2')(lstm_out)
     dense = Dense(place_dim + 1, name='dense')(lstm_out)
     out_vec = merge([dense,user_embedding],mode='sum')
     pred = Activation('softmax')(out_vec)
