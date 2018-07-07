@@ -273,9 +273,6 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
             # pl_records_modify = []
             if seg_max_record < len(traj):
                 seg_max_record = len(traj)
-            if len(traj) >100:
-                for r in traj:
-                    print r
             for record in traj:
                 pl_features.append(poi_index_dict[record[0]]+1)
                 time_features.append(time_hour_la(record[4])+1)
