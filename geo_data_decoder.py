@@ -1,5 +1,5 @@
 import cPickle
-from model.rnn_model_keras import geo_lprnn_model,geo_lprnn_text_model,geo_lprnn_trainable_text_model
+from model.serm_models import geo_lprnn_model,geo_lprnn_text_model,geo_lprnn_trainable_text_model
 from eval_tools import *
 import config
 
@@ -205,7 +205,6 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
     # use W and min_traj_num filter data
     for user in users:
         ci_records = user_ci[user]
-        # ci_records.reverse()
         clean_records = []
         traj_records = []
         perious_record = None
@@ -218,7 +217,6 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
                 dif = time_diff_la(time,perious_record[4])
                 if dif<0: print "Fasle"
                 if (dif< w) & (dif>0):
-                    # print time_diff(time,perious_record[4])
                     traj_records.append(record)
                 else:
                     if (len(traj_records)>min_seq_num) & (len(traj_records)<max_seq_num):
@@ -250,7 +248,6 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
         for i in useful_poi_dict.keys():
             poifs = poi_attr[i]
             index.append(i)
-            # print poifs
             x.append(float(poifs[0]))
             y.append(float(poifs[1]))
         poi_index_dict, center_location_list = geo_grade(index, x, y, m_nGridCount=gridc)
@@ -270,14 +267,15 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
             pl_features = []
             time_features = []
             text_features = []
-            # pl_records_modify = []
             if seg_max_record < len(traj):
                 seg_max_record = len(traj)
+            if len(traj) >100:
+                for r in traj:
+                    print r
             for record in traj:
                 pl_features.append(poi_index_dict[record[0]]+1)
                 time_features.append(time_hour_la(record[4])+1)
                 text_features.append(record[6])
-                # pl_records_modify.append(record[0])
             all_sequ_features.append([pl_features,time_features,text_features])
         user_feature_sequence[user] = all_sequ_features
     print 'seg_max_record, pois_num, user_num'
@@ -288,7 +286,6 @@ def geo_data_clean_la(w = WINDOW_SIZE,min_seq_num = MIN_SEQ, max_seq_num = MAX_S
             grid_count[poi_index_dict[poi]] = 1
         else:
             grid_count[poi_index_dict[poi]] += 1
-    # print ("grid count:", grid_count)
     print ("userful poi nums:",len(grid_count.keys()))
 
     user_feature_sequence_text, useful_vec= text_feature_generation(user_feature_sequence,dataset='LA')

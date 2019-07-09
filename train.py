@@ -1,6 +1,11 @@
 from geo_data_decoder import *
 from eval_tools import *
 import config
+import os
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+os.environ["CUDA_VISIBLE_DEVICES"]  = config.GPU
 
 PRETRAINED_FS = config.PRETRAINED_FS
 PRETRAINED_LA = config.PRETRAINED_LA
@@ -31,6 +36,7 @@ def train(dataset = 'FS'):
         train_X, train_Y, train_evl, vali_X, vali_Y, vali_evl, user_dim, word_vec, word_index\
             = geo_dataset_train_test_text(user_feature_sequence,useful_vec, seg_max_record)
         print ("Feature generation completed")
+        frequent_location_last(train_X, vali_X, vali_evl, center_location_list)
         nearest_location_last(vali_X, vali_evl, center_location_list)
         model =geo_lprnn_trainable_text_model(user_dim,seg_max_record,word_vec)
         model.load_weights(PRETRAINED_LA)

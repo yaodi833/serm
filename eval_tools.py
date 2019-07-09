@@ -6,6 +6,11 @@ from math import radians, cos, sin, asin, sqrt
 import config
 import operator
 import threading
+import os
+
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+
+os.environ["CUDA_VISIBLE_DEVICES"]  = config.GPU
 
 GRID_COUNT = config.GRID_COUNT
 BATCH_SIZE = config.batch_size
@@ -18,7 +23,6 @@ random.seed(2017)
 
 def time_hour(ci_time, form = '%Y-%m-%d %X'):
     st = time.strptime(ci_time, form)
-    mounth = st.tm_mon
     weekday = st.tm_wday
     hour = st.tm_hour
     if weekday < 6:
@@ -35,18 +39,14 @@ def time_diff_la(time1,time2,form = '%Y-%m-%d %X'):
     s = time1
     if 'CDT' in s:
         t1 = time.strptime(s.replace(' CDT',''))
-        # t1.tm_isdst()
     if 'CST' in s:
         t1 = time.strptime(s.replace(' CST',''))
-        # t1.tm_isdst = -1
 
     s = time2
     if 'CDT' in s:
         t2 = time.strptime(s.replace(' CDT',''))
-        # t2.tm_isdst = 1
     if 'CST' in s:
         t2 = time.strptime(s.replace(' CST',''))
-        # t2.tm_isdst = -1
 
     return abs(int(time.mktime(t1))-int(time.mktime(t2)))
 
@@ -54,11 +54,8 @@ def time_hour_la(ci_time, form = '%Y-%m-%d %X'):
     s = ci_time
     if 'CDT' in s:
         st = time.strptime(s.replace(' CDT',''))
-        # t1.tm_isdst()
     if 'CST' in s:
         st = time.strptime(s.replace(' CST',''))
-        # t1.tm_isdst = -1
-    mounth = st.tm_mon
     weekday = st.tm_wday
     hour = st.tm_hour
     if weekday < 6:
@@ -203,6 +200,57 @@ def nearest_location_last(vali_X, vali_evl, center_location_list):
     print [hc1 / count, hc5 / count,
            hc10 / count, hc15 / count, hc20 / count, alldistance / count]
 
+def frequent_location_last(train_X, vali_X, vali_evl, center_location_list):
+    all_train_X_pl, all_train_X_user= train_X[0],train_X[2]
+    all_test_X_pl, all_test_X_user = vali_X[0],vali_X[2]
+    count, hc1 , hc5 , hc10, hc15, hc20, alldistance = 0.,0.,0.,0.,0.,0.,0.
+    all_train_X_pl = all_train_X_pl.tolist()
+
+    user_frequent_pl = {}
+    for j in range(len(all_train_X_pl)):
+        if not user_frequent_pl.has_key(all_train_X_user[j][0]):
+            user_frequent_pl[all_train_X_user[j][0]] = np.zeros(len(center_location_list))
+        for p in range(len(all_train_X_pl[j])):
+            if all_train_X_pl[j][p] != 0:
+                user_frequent_pl[all_train_X_user[j][0]][all_train_X_pl[j][p]-1] += 1
+
+    all_test_X_pl = all_test_X_pl.tolist()
+    for j in range(len(all_test_X_pl)):
+        ground_truth = vali_evl[j]
+        user = all_test_X_user[j][0]
+        for g in range(len(ground_truth)):
+            flag = False
+            if ((g+1)<len(ground_truth)):
+                if (ground_truth[g] != 0) & (ground_truth[g+1]==0):
+                    flag = True
+            else:
+                if ground_truth[g] != 0:
+                    flag =True
+            if flag:
+                ground_g = ground_truth[g] -1
+                if ground_g in user_frequent_pl[user].argsort()[-1:][::-1]: hc1 +=1
+                if ground_g in user_frequent_pl[user].argsort()[-5:][::-1]: hc5 +=1
+                if ground_g in user_frequent_pl[user].argsort()[-10:][::-1]: hc10 +=1
+                if ground_g in user_frequent_pl[user].argsort()[-15:][::-1]: hc15 += 1
+                if ground_g in user_frequent_pl[user].argsort()[-20:][::-1]: hc20 += 1
+
+                dd = []
+                for k in user_frequent_pl[user].argsort()[-5:][::-1]:
+                    pred = center_location_list[k]
+                    tr = center_location_list[ground_g]
+                    d = haversine(pred[0], pred[1], tr[0], tr[1])
+                    dd.append(d)
+                d = min(dd)
+                alldistance += d
+                count+=1
+                if count % 100 == 0: print ("frequent location",count)
+    print ("frequent location",count)
+    print (hc1 , hc5 , hc10, hc15, hc20)
+    print [hc1 / count, hc5 / count,
+           hc10 / count, hc15 / count, hc20 / count, alldistance / count]
+    return [hc1 / count, hc5 / count,
+           hc10 / count, hc15 / count, hc20 / count, alldistance / count]
+
 def load_wordvec(vecpath = WORD_VEC_PATH):
     word_vec = {}
     with open(vecpath,'r') as f:
@@ -239,10 +287,7 @@ def text_feature_generation(user_feature_sequence, dataset='FS'):
                             words_key.append(w)
                 else: print "Text == 0"
                 useful_word_sample.append(words_key)
-                # if len(words_key) ==0 : print ("record empty useful words")
             user_feature_sequence[u][traj_fea].append(useful_word_sample)
-        # if count % 20 ==0:
-        #     print user_feature_sequence[u]
     return user_feature_sequence,useful_vec
 
 def text_features_to_categorical(text_features_train, word_index):
@@ -395,7 +440,6 @@ def batch_generator_text(train_X, train_Y,word_index):
     while 1:
         j = 0
         while j < train_X[0].shape[0]:
-            # print ("Batched sample num:", j, train_X[0].shape[0])
             y_b = []
             pl_b, time_b, user_b = train_X[0][j:j+BATCH_SIZE], train_X[1][j:j+BATCH_SIZE], train_X[2][j:j+BATCH_SIZE]
             text_b = np.array(text_features_to_categorical_batch(train_X[3][j:j+BATCH_SIZE], word_index))
@@ -404,7 +448,6 @@ def batch_generator_text(train_X, train_Y,word_index):
             yield ([pl_b, time_b, user_b, text_b], np.array(y_b))
 
             if (j + BATCH_SIZE) > train_X[0].shape[0]:
-                # print ("This is the end batch of epoch")
                 y_b= []
                 pl_b, time_b, user_b = train_X[0][j:], train_X[1][j:], train_X[2][j:]
                 text_b =np.array(text_features_to_categorical_batch( train_X[3][j:], word_index))
