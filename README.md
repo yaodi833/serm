@@ -7,6 +7,15 @@ In this repository, we propose a RNN-based model, namely SERM, to predict next l
 
 ## Files
 There are four python files in the root path.
+
+| Filename    |      Description      |  Cool |
+|----------|:-------------:|------:|
+| config.py |  All configurations in SERM model. | $1600 |
+| eval_tool.py |   Evaluation functions and tools.   |   $12 |
+| geo_data_decoder.py | Preprocessing for both New York Foursquare and Los Angelos Geo-Tweets. |    $1 |
+| train.py| Training procedure of SERM. This is the entrace of SERM model. |    $1 |
+
+
 #### config.py:  
 All configurations in SERM model.
 #### eval_tool.py:  
